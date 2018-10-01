@@ -1,0 +1,9 @@
+bin/*
+lib/*
+lib64/*
+include/*
+__pycache__
+share/*
+*.pyc
+node_modules/*
+dev.yaml

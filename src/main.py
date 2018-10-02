@@ -7,7 +7,7 @@ import peewee_async
 
 from models.base import db
 
-from api.user import UserHandler
+from api.user import (UserHandler, ProfileManager)
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
@@ -16,7 +16,8 @@ class MainHandler(tornado.web.RequestHandler):
 def make_app():
     return tornado.web.Application([
         (r"/", MainHandler),
-        (r'/user/(?P<id>[^\/]+)', UserHandler)
+        (r'/api/v1/accounts/(?P<id>[\d+])', UserHandler),
+        (r'/api/v1/accounts/update_credentials', ProfileManager)
     ], debug=True)
 
 if __name__ == "__main__":

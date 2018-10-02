@@ -26,4 +26,4 @@ if __name__ == "__main__":
     app.listen(8888)
     app.objects = peewee_async.Manager(db)
     #loop = asyncio.get_event_loop().run_forever()
-    #tornado.ioloop.IOLoop.current().start()
+    tornado.ioloop.IOLoop.current().start()

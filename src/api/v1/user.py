@@ -7,7 +7,7 @@ from models.user import UserProfile, User
 from models.status import Status
 from models.token import Token
 
-from api.base_handler import BaseHandler
+from api.v1.base_handler import BaseHandler
 from auth.token_auth import bearerAuth
 
 from utils.atomFeed import generate_feed

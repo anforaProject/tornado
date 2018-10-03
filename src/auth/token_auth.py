@@ -51,9 +51,10 @@ def bearerAuth(method):
 def is_authenticated(method):
 
     @functools.wraps(method)
-    def wrapper(self, *args, **kwargs):
+    async def wrapper(self, *args, **kwargs):
         auth = self.request.headers.get('Authorization')
         authenticated = True
+        kwargs['user'] = None
         if auth:
             parts = auth.split()
             if parts[0].lower() != 'bearer':
@@ -67,7 +68,6 @@ def is_authenticated(method):
             t = await loadUserToken(token, self.application.objects)
             if t == None:
                 authenticated = False
-                kwargs['user'] = None
             else:
                 kwargs['user'] = t
         else:

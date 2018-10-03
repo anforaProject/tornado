@@ -5,10 +5,10 @@ import peewee_async
 import functools
 from models.base import db
 
-def loadUserToken(token, object):
+async def loadUserToken(token, object):
     
     try:
-        candidate = Token.get(key=token)
+        candidate = await object.get(Token, key=token)
         return candidate.user
     except Token.DoesNotExist:
         return None
@@ -17,7 +17,7 @@ def loadUserToken(token, object):
 def bearerAuth(method):
 
     @functools.wraps(method)
-    def wrapper(self, *args, **kwargs):
+    async def wrapper(self, *args, **kwargs):
         auth = self.request.headers.get('Authorization')
 
         if auth:
@@ -40,7 +40,39 @@ def bearerAuth(method):
                 handler.finish()
 
             token = parts[1]
-            t = loadUserToken(token, self.application.objects)
+            t = await loadUserToken(token, self.application.objects)
+            if not t:
+                handler.write("Invalid token")
+                handler.finish()
             kwargs['user'] = t
+        return method(self,*args, **kwargs)
+    return wrapper
+
+def is_authenticated(method):
+
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        auth = self.request.headers.get('Authorization')
+        authenticated = True
+        if auth:
+            parts = auth.split()
+            if parts[0].lower() != 'bearer':
+                authenticated = False
+            elif len(parts) == 1:
+                authenticated = False
+            elif len(parts) > 2:
+                authenticated = False
+
+            token = parts[1]
+            t = await loadUserToken(token, self.application.objects)
+            if t == None:
+                authenticated = False
+                kwargs['user'] = None
+            else:
+                kwargs['user'] = t
+        else:
+            authenticated = False
+
+        kwargs['is_authenticated'] = authenticated
         return method(self,*args, **kwargs)
     return wrapper

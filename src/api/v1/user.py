@@ -1,0 +1,202 @@
+import json
+import logging
+
+from tornado.web import HTTPError, RequestHandler
+
+from models.user import UserProfile, User
+from models.status import Status
+from models.token import Token
+
+from api.base_handler import BaseHandler
+from auth.token_auth import bearerAuth
+
+from utils.atomFeed import generate_feed
+
+from managers.user_manager import new_user
+
+from tasks.emails import confirm_token
+
+logger = logging.getLogger(__name__)
+
+
+class UserHandler(BaseHandler):
+    def set_default_headers(self):
+        self.set_header("Content-Type", 'application/json')
+
+    async def get(self, id):
+        try:
+            person = await self.application.objects.get(User, User.id==int(id))
+            profile = person.profile.get()
+
+            self.write(json.dumps(profile.to_json(), default=str).encode('utf-8'))
+            self.set_status(200)
+        except User.DoesNotExist:
+            raise HTTPError(404, "User not found")
+
+class VerifyCredentials(BaseHandler):
+
+    @bearerAuth
+    async def get(self, user):
+
+        self.write(json.dumps(profile.to_json(), default=str).encode('utf-8'))
+
+class ProfileManager(BaseHandler):
+
+    """
+    
+        Update the profile info for an user.
+
+        patch: Valid arguments are:
+
+            - display_name: The name to show
+            - note: A description
+            - locked: true if the account is private
+            - bot: true if the account is a bot
+            - avatar: a file containing the image for the user account
+
+    """
+
+    @bearerAuth
+    async def patch(self, user):
+
+        errors = []
+
+        valids_types = ['image/png', 'image/jpeg']
+
+        if self.get_argument('display_name', None):
+            if len(self.get_argument('display_name')) <= 31: 
+                user.name = self.get_argument('display_name')
+            else:
+                errors.append('display_name length exceeded.')
+        
+        if self.get_argument('note', False):
+            if len(self.get_argument('note')) <= 160:
+                user.description = self.get_argument('note')
+            else:
+                errors.append('Note length exceeded.')
+
+        if self.get_argument('locked', False):
+            user.private = self.get_argument('locked') in ['true']
+
+        if self.get_argument('bot', False):
+            user.bot = self.get_argument('bot') in ['true']
+
+        if 'avatar' in self.request.files.keys():
+            if self.request.files['avatar'][0]['content_type'] in valids_types:
+            # TO DO 
+            # Review that this works
+                user.avatar_file = user.update_avatar(self.request.files['avatar'][0]['body'])
+
+        
+        # Once all the changes have been made
+
+        if not errors:
+            await self.application.objects.update(user)
+            self.write(json.dumps(user.to_json(), default=str).encode('utf-8'))
+        
+        else:
+
+            self.set_status(422)
+            self.write(json.dumps(errors).encode('utf-8'))
+
+class LogoutUser(BaseHandler):
+
+    """
+        Delete the token associated to an account.
+        Therefor this ends its session.
+    """
+
+    @bearerAuth
+    async def post(sef, user):
+        token = self.request.headers.get('Authorization').split()[1]
+
+        try:
+            token = await self.application.objects.get(Token, key=token)
+
+            if user == token.user:
+                await self.application.objects.delete(token)
+                self.write({"Success": "Removed token"})
+            else:
+                self.set_status(401)
+                self.write({"Error": "Unauthorized user"})
+        
+        except Token.DoesNotExist:
+            self.write({"Error": "This token doesn't exists"})
+
+class atomFeed(BaseHandler):
+
+    async def get(self, id):
+
+        try:
+            user = await self.application.objects.get(User, id=id)
+            if self.get_argument('max_id', False):
+                feed = generate_feed(user, int(self.get_argument('max_id')))
+            else:
+                feed = generate_feed(user)
+            
+            self.set_header('Content-Type', 'application/xml')
+            self.write(feed)  
+
+        except User.DoesNotExist:
+            self.set_status(404)
+            self.write({"Error": "User doesn't exits"})
+
+class UserURLConfirmation(BaseHandler):
+
+    async def get(self, token):
+        email = confirm_token(token)
+        if email:
+            try:
+                user = self.application.objects(User, email=email)
+                user.confirmed = True 
+                self.application.objects.update(user)
+            
+            except User.DoesNotExist:
+                self.set_status(404)
+                self.write({"Error": "User not available"})
+        else:
+            self.set_status(500)
+            self.write({"Error": "Invalid code or too old"})
+
+
+class RegisterUser(BaseHandler):
+
+    async def post(self):
+
+        username = self.get_argument('username')
+        password = self.get_argument('password')
+        confirmation = self.get_argument('password_confirmation')
+        email = self.get_argument('email')
+
+        valid_password = password == confirmation
+
+        username_count = await self.application.objects.execute(User.select().where(User.username==username).count())
+
+        free = username_count == 0
+        logger.debug(f'username is free: {free}')
+        if valid_password and free:
+
+            try:
+
+                logger.debug("Creating new user")
+                profile = new_user(
+                    username = username, 
+                    password = password,
+                    description = "",
+                    email = parseaddr(email)[1]
+                )
+
+                if not profile:
+                    logger.error("Error creating profile")
+                    self.set_status(402)
+                    self.write({"Error": "Wrong username. Valid characters are number, ascii letters and (.) (_)"})
+
+            except Exception as e:
+                logger.error(e)
+                self.set_status(500)
+                self.write({"Error": "Error creating new user"})
+        
+        else:
+
+            self.set_status(400)
+            self.write({"Error": "User not available or password not matching"})

@@ -19,6 +19,9 @@ peewee = "==3.7.0"
 peewee-async = "*"
 itsdangerous = "*"
 "psycopg2-binary" = "*"
+python-magic = "*"
+moviepy = "*"
+aioredis = "*"
 
 [requires]
 python_version = "3.6"

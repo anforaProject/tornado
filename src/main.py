@@ -7,10 +7,15 @@ import peewee_async
 
 from models.base import db
 
-from api.v1.user import (UserHandler, ProfileManager)
+from api.v1.user import (UserHandler, ProfileManager, RegisterUser)
 from api.v1.status import (StatusHandler, UserStatuses, FavouriteStatus,
-                            UnFavouriteStatus    
+                            UnFavouriteStatus   
                         )
+
+from api.v1.server import (WellKnownNodeInfo, WellKnownWebFinger, NodeInfo)
+from api.v1.media import UploadMedia
+from api.v1.timelines import (HomeTimeline)
+
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
@@ -27,6 +32,16 @@ def make_app():
         (r'/api/v1/statuses/(?P<pid>[\d+]+)', StatusHandler),
         (r'/api/v1/statuses/(?P<pid>[\d+]+)/favourite', FavouriteStatus),
         (r'/api/v1/statuses/(?P<pid>[\d+]+)/unfavourite', UnFavouriteStatus),
+
+        (r'/.well-known/nodeinfo', WellKnownNodeInfo),
+        (r'/.well-known/webfinger', WellKnownWebFinger),
+        (r'/nodeinfo', NodeInfo),
+
+        (r'/api/v1/timelines/home', HomeTimeline),
+
+        (r'/api/v1/media', UploadMedia),
+
+        (r'/api/v1/register', RegisterUser)
     ], debug=True)
 
 if __name__ == "__main__":

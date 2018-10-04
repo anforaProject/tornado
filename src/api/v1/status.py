@@ -115,7 +115,7 @@ class UserStatuses(BaseHandler):
         elif self.get_argument('in_reply_to_id', False):
 
             try:
-                replying_to = await self.application.objects.get(Status,id=int(self.get_argument('in_reply_to_id'))
+                replying_to = await self.application.objects.get(Status,id=int(self.get_argument('in_reply_to_id')))
             except Status.DoesNotExists:
                 self.set_status(500)
                 self.write({"Error": "Replying to bad ID"})

@@ -1,5 +1,5 @@
 import tornado.ioloop
-import tornado.web
+import tornado.web 
 from tornado.platform.asyncio import AsyncIOMainLoop
 import asyncio
 
@@ -10,7 +10,7 @@ from models.base import db
 from api.v1.user import (UserHandler, ProfileManager, RegisterUser, AuthUser,
                         VerifyCredentials)
 from api.v1.status import (StatusHandler, UserStatuses, FavouriteStatus,
-                            UnFavouriteStatus   
+                            UnFavouriteStatus, FetchUserStatuses  
                         )
 
 from api.v1.server import (WellKnownNodeInfo, WellKnownWebFinger, NodeInfo)
@@ -19,17 +19,21 @@ from api.v1.timelines import (HomeTimeline)
 
 
 class MainHandler(tornado.web.RequestHandler):
-    def get(self):
-        self.write("Hello, world")
+    def get(self, path):
+        try:
+            with open("/home/yabir/killMe/anfora/src/client/dist/index.html") as f:
+                self.write(f.read())
+        except IOError as e:
+            self.write("404: Not Found")
 
+            
 def make_app():
     return tornado.web.Application([
-        (r"/", MainHandler),
         (r'/api/v1/accounts/(?P<id>[\d+])', UserHandler),
-        (r'/api/v1/accounts/(?P<id>[\d+])/statuses', UserStatuses),
+        (r'/api/v1/accounts/(?P<id>[\d+])/statuses', FetchUserStatuses),
         (r'/api/v1/accounts/update_credentials', ProfileManager),
 
-        (r'/api/v1/statuses/', UserStatuses),
+        (r'/api/v1/statuses', UserStatuses),
         (r'/api/v1/statuses/(?P<pid>[\d+]+)', StatusHandler),
         (r'/api/v1/statuses/(?P<pid>[\d+]+)/favourite', FavouriteStatus),
         (r'/api/v1/statuses/(?P<pid>[\d+]+)/unfavourite', UnFavouriteStatus),
@@ -44,7 +48,8 @@ def make_app():
         (r'/api/v1/auth', AuthUser),
         (r'/api/v1/accounts/verify_credentials', VerifyCredentials),
 
-        (r'/api/v1/register', RegisterUser)
+        (r'/api/v1/register', RegisterUser),
+        (r'/(.*)', MainHandler),
     ], debug=True)
 
 if __name__ == "__main__":

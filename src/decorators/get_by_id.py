@@ -16,7 +16,7 @@ def retrive_by_id(model):
                 obj = await self.application.objects.get(model, id=int(kwargs['pid']))
                 kwargs["target"] = obj
                 
-            except Exception as e:
+            except model.DoesNotExist:
                 print(e)
                 self.set_status(404)
                 self.write({"Error": "Object not found"})

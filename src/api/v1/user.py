@@ -39,9 +39,6 @@ class AuthUser(BaseHandler):
 
 
 class UserHandler(BaseHandler):
-    def set_default_headers(self):
-        self.set_header("Content-Type", 'application/json')
-
     async def get(self, id):
         try:
             person = await self.application.objects.get(User, User.id==int(id))

@@ -44,7 +44,7 @@ class UploadMedia(BaseHandler):
             try:
                 ident = str(uuid.uuid4())
                 media = await self.application.objects.get(Media, media_name = ident)
-            except Media.DoesNotExists:
+            except Media.DoesNotExist:
                 valid = True # If we are here that means that the object exits
 
 

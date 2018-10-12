@@ -18,6 +18,7 @@ from managers.timeline_manager import TimelineManager
 
 class HomeTimeline(BaseHandler):
 
+    @bearerAuth
     async def get(self, user):
         
         #r = await aioredis.create_connection(

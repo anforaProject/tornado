@@ -7,7 +7,8 @@ import peewee_async
 
 from models.base import db
 
-from api.v1.user import (UserHandler, ProfileManager, RegisterUser)
+from api.v1.user import (UserHandler, ProfileManager, RegisterUser, AuthUser,
+                        VerifyCredentials)
 from api.v1.status import (StatusHandler, UserStatuses, FavouriteStatus,
                             UnFavouriteStatus   
                         )
@@ -40,6 +41,8 @@ def make_app():
         (r'/api/v1/timelines/home', HomeTimeline),
 
         (r'/api/v1/media', UploadMedia),
+        (r'/api/v1/auth', AuthUser),
+        (r'/api/v1/accounts/verify_credentials', VerifyCredentials),
 
         (r'/api/v1/register', RegisterUser)
     ], debug=True)
@@ -48,7 +51,7 @@ if __name__ == "__main__":
     #AsyncIOMainLoop().install()
     app = make_app()
 
-    app.listen(8888)
+    app.listen(3000)
     app.objects = peewee_async.Manager(db)
     #loop = asyncio.get_event_loop().run_forever()
     tornado.ioloop.IOLoop.current().start()

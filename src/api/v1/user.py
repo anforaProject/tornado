@@ -8,7 +8,7 @@ from models.status import Status
 from models.token import Token
 
 from api.v1.base_handler import BaseHandler
-from auth.token_auth import bearerAuth
+from auth.token_auth import bearerAuth, userPassLogin, basicAuth
 
 from utils.atomFeed import generate_feed
 
@@ -17,6 +17,25 @@ from managers.user_manager import new_user
 from tasks.emails import confirm_token
 
 logger = logging.getLogger(__name__)
+
+
+class AuthUser(BaseHandler):
+
+    @basicAuth
+    async def get(self, user):
+
+        if user.is_remote:
+            resp.status = falcon.HTTP_401
+            resp.body = json.dumps({"Error": "Remote user"})
+
+        token = Token.create(user=user)
+
+        payload = {
+            "token": "Bearer " + token.key
+        }
+
+        self.write(payload)
+        self.set_status(200)
 
 
 class UserHandler(BaseHandler):
@@ -38,7 +57,7 @@ class VerifyCredentials(BaseHandler):
     @bearerAuth
     async def get(self, user):
 
-        self.write(json.dumps(profile.to_json(), default=str).encode('utf-8'))
+        self.write(json.dumps(user.to_json(), default=str).encode('utf-8'))
 
 class ProfileManager(BaseHandler):
 

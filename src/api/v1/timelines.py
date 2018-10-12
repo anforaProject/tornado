@@ -31,7 +31,7 @@ class HomeTimeline(BaseHandler):
         max_id = self.get_argument('max_id', None) 
         since_id = self.get_argument('since_id', None)
         limit = self.get_argument('limit', 20)
-
+        
         statuses = []
         errors = 0
 
@@ -39,7 +39,8 @@ class HomeTimeline(BaseHandler):
             status = Status.get_or_none(id=int(post))
             if status:
                 json_data = status.to_json()
-                if self.application.objects.count(Like.select().join(UserProfile).switch(Like).join(Status).switch(Like).where(Like.user.id == user.id, Like.status.id == status)):
+                count = await self.application.objects.count(Like.select().join(UserProfile).switch(Like).join(Status).switch(Like).where(Like.user.id == user.id, Like.status.id == status))
+                if count:
                     json_data["favourited"] = True
                 
                 statuses.append(json_data)

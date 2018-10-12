@@ -16,6 +16,7 @@ from decorators.get_by_id import retrive_by_id
 from managers.user_manager import UserManager
 
 from tasks.redis.spreadStatus import spread_status
+from tasks.redis.remove_status import remove_status
 
 
 logger = logging.getLogger(__name__)
@@ -35,29 +36,45 @@ class StatusHandler(BaseHandler):
             
     @bearerAuth
     @retrive_by_id(Status)
-    async def delete(self, id, user, target):
+    def delete(self, pid, user, target):
         if target.user.id == user.id:
-            await self.application.objects.delete(target)
+            remove_status(target)
         else:
             self.write({"Error": "You can't perform this action"})
+            self.set_status(401)
 
 
 class FavouriteStatus(BaseHandler):
 
     @bearerAuth
     @retrive_by_id(Status)
-    async def post(self, pid, target, user):
+    def post(self, pid, target, user):
         UserManager(user).like(target)
-        self.write(json.dumps(status, default=str))
+        self.write(json.dumps(target, default=str))
 
 class UnFavouriteStatus(BaseHandler):
     
     @bearerAuth
     @retrive_by_id(Status)
-    async def post(self, pid, target, user):
+    def post(self, pid, target, user):
 
         UserManager(user).dislike(target)
         self.write(json.dumps(target, default=str))
+
+class FetchUserStatuses(BaseHandler):
+    async def get(self, id):
+        try:
+            user = await self.application.objects.get(User, id=id)
+            user = user.profile.get()
+            photos = await self.application.objects.execute(
+                Status.select().where(Status.user == user).order_by(Status.created_at.desc())
+            )
+            
+            query = [photo.to_json() for photo in photos]
+            self.write(json.dumps(query, default=str))
+        except User.DoesNotExist:
+            self.write({"Error": "User not found"})
+    
 
 class UserStatuses(BaseHandler):
 
@@ -66,16 +83,14 @@ class UserStatuses(BaseHandler):
 
     get: requires the id argument
     """
-
     @bearerAuth
     async def get(self, user):
-       
         photos = await self.application.objects.execute(
-            Status.select().join(User).where(UserProfile.username == user).order_by(Status.created_at.desc())
+            Status.select().where(Status.user == user).order_by(Status.created_at.desc())
         )
-
-        query = [photo.to_model() for photo in photos]
-
+        
+        query = [photo.to_json() for photo in photos]
+        print(query)
         self.write(json.dumps(query, default=str))
     
     @bearerAuth
@@ -99,14 +114,14 @@ class UserStatuses(BaseHandler):
         
             for image in self.get_argument('media_ids').split(","):
                 try:
-                    m = self.application.objects.get(media_name=image)
+                    m = await self.application.objects.get(Media, media_name=image)
                     m.status = status
                     await self.application.objects.update(m)
-                except Media.DoesNotExists:
+                except Media.DoesNotExist:
                     logger.error(f"Media id not found {image} for {status.id}")
 
             await self.application.objects.execute(
-                UserProfile.update({UserProfile.statuses_count: UserProfile.statuses_count + 1}).where(UserProfile.id == user.id).execute()
+                UserProfile.update({UserProfile.statuses_count: UserProfile.statuses_count + 1}).where(UserProfile.id == user.id)
             )
             spread_status(status)
 
@@ -116,7 +131,7 @@ class UserStatuses(BaseHandler):
 
             try:
                 replying_to = await self.application.objects.get(Status,id=int(self.get_argument('in_reply_to_id')))
-            except Status.DoesNotExists:
+            except Status.DoesNotExist:
                 self.set_status(500)
                 self.write({"Error": "Replying to bad ID"})
 

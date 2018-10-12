@@ -39,15 +39,15 @@ class TimelineManager:
 
         self.r.zadd(timeline_name, status.id, status.id)
 
-    def remove_from_home(self, status_id):
+    def remove_from_home(self, status):
         
         """
-        id is an integer representating the status id
+        status: An instance of Status
 
         
         """
         timeline_name = self.HOME_TIMELINE.format(self.user.id)
-        self.r.zrem(timeline_name, status_id)
+        self.r.zrem(timeline_name, status.id)
 
     def push_notification(self, notification):
 
@@ -62,7 +62,7 @@ class TimelineManager:
         self.r.zadd(timeline_name, notification.id, notification.id)
 
     def remove_notification(self, notification_id):
-        timeline_name = self.HOME_TIMELINE.format(self.user.id)
+        timeline_name = self.NOTIFICATIONS.format(self.user.id)
         self.r.zrem(timeline_name, notification_id)
 
     def range_home(self, count=0, offset=0, limit = -1):
@@ -126,6 +126,7 @@ class TimelineManager:
             else:
                 ids = []
         elif not since_id and not max_id:
-            ids = self.r.zrevrange(timeline_name, 0, limit, score_cast_func=int)
             
+            ids = self.r.zrevrange(timeline_name, 0, limit, score_cast_func=int)
+
         return ids

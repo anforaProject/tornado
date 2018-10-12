@@ -16,7 +16,3 @@ db = PostgresqlDatabase(
 class BaseModel(Model):
     class Meta:
         database = db
-
-    def __exclude(self, lst=[]):
-        from models.user import UserProfile
-        return [UserProfilepassword] + lst
